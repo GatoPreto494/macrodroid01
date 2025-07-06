@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes Vencendo Hoje</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap; /* Permite que os controles quebrem a linha em telas menores */
+            justify-content: center; /* Centraliza os controles */
+        }
+
+        #jsonFileInput {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #importButton, #clearButton {
+            padding: 10px 15px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        #clearButton {
+            background-color: #dc3545;
+        }
+
+        #importButton:hover {
+            background-color: #218838;
+        }
+
+        #clearButton:hover {
+            background-color: #c82333;
+        }
+
+        .button-container {
+            position: relative;
+            text-align: center;
+        }
+
+        #clientButton {
+            padding: 20px 40px;
+            font-size: 2em;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 250px;
+            min-height: 100px;
+            text-decoration: none;
+        }
+
+        #clientButton:hover {
+            background-color: #0056b3;
+        }
+
+        #clientButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #copyLabel {
+            font-size: 0.5em;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #phoneNumberDisplay {
+            font-size: 1em;
+        }
+
+        .badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 8px 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="file" id="jsonFileInput" accept=".json">
+        <button id="importButton">Importar JSON</button>
+        <button id="clearButton">Limpar Dados</button>
+    </div>
+
+    <div class="button-container">
+        <button id="clientButton">
+            <span id="copyLabel"></span>
+            <span id="phoneNumberDisplay">Carregando...</span>
+        </button>
+        <span class="badge" id="clientCountBadge">0</span>
+    </div>
+
+    <script>
+        const clientButton = document.getElementById('clientButton');
+        const clientCountBadge = document.getElementById('clientCountBadge');
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const importButton = document.getElementById('importButton');
+        const clearButton = document.getElementById('clearButton');
+        const copyLabel = document.getElementById('copyLabel');
+        const phoneNumberDisplay = document.getElementById('phoneNumberDisplay');
+
+        // JSON inicial que você forneceu - será usado se não houver dados no Local Storage
+        const initialClientData = [
+            { "id": "03318", "data": "27/06/2025", "nome": "Joel3318 iptv- (UniTv)", "telefone": "5511950203318", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": true, "desativado": false },
+            { "id": "98790", "data": "12/06/2025", "nome": "iptv 7_Daniel8790- (UniTv)", "telefone": "5511934398790", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "10455", "data": "16/07/2025", "nome": "Karol0455_ (UniTv)", "telefone": "5511948710455", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "96376", "data": "17/07/2025", "nome": "Pix programado aline6376_ (UniTv)", "telefone": "5511991896376", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "39765", "data": "17/06/2025", "nome": "Diego9765_ (UniTv)", "telefone": "5511970139765", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "02554", "data": "20/07/2025", "nome": "jessica2554_ (UniTv)", "telefone": "5511947002554", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "46573", "data": "21/07/2025", "nome": "Ginis6573_ (UniTv)", "telefone": "5511982946573", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "88907", "data": "21/07/2025", "nome": "Josenildo 8907_ (UniTv)", "telefone": "558291188907", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "00877", "data": "19/06/2025", "nome": "Talita0877_ (UniTv)", "telefone": "5511995100877", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": true },
+            { "id": "06083", "data": "17/07/2025", "nome": "Iptv Leone 16_Adriana6083- (UniTv)", "telefone": "5511992406083", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "64719", "data": "22/06/2025", "nome": "Caio4719_ (UniTv)", "telefone": "5511981864719", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "08607", "data": "23/07/2025", "nome": "###Thiago8607_ (UniTv)", "telefone": "5511941808607", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "51812", "data": "20/06/2025", "nome": "Everton1812 iptv_ (UniTv)", "telefone": "5511988551812", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "97262", "data": "22/06/2025", "nome": "Tonhão7262_ (UniTv)", "telefone": "5511952297262", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "50875", "data": "28/07/2025", "nome": "Romario0875_ (UniTv)", "telefone": "5511988650875", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "87512", "data": "07/07/2025", "nome": "Raul_ (UniTv)", "telefone": "5511999287512", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "11959", "data": "29/07/2025", "nome": "Matheus1959 iptv_ (UniTv)", "telefone": "559281111959", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "47851", "data": "03/06/2025", "nome": "João Paulo7851 Iptv (UniTv)", "telefone": "5511987147851", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "67838", "data": "21/06/2025", "nome": "Lipe7838_ (UniTv)", "telefone": "5511952367838", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "49723", "data": "26/06/2025", "nome": "Remi9723_ (UniTv)", "telefone": "5511967149723", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": true },
+            { "id": "80841", "data": "27/06/2025", "nome": "maximo0841_ (UniTv)", "telefone": "5511968880841", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": true },
+            { "id": "27435", "data": "13/07/2025", "nome": "Welington Alex_ (UniTv)", "telefone": "5511978527435", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "62118", "data": "29/07/2025", "nome": "Elaine batatta_ (Duplecast)", "telefone": "5511932262118", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "15854", "data": "01/07/2025", "nome": "xxxMatheus5854_ (UniTv)", "telefone": "5511944415854", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": true, "verDepois": false, "desativado": false },
+            { "id": "10519", "data": "29/07/2025", "nome": "Cosme_ (UniTv)", "telefone": "5511930210519", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "16088", "data": "29/07/2025", "nome": "Dri6088_ (UniTv)", "telefone": "5511998816088", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "12100", "data": "29/07/2025", "nome": "~Lara2100 iptv (UniTv)", "telefone": "5511932712100", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "97521", "data": "28/06/2025", "nome": "bete7521_ (UniTv)", "telefone": "5511981797521", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": true },
+            { "id": "52083", "data": "02/07/2025", "nome": "~Alana2083 iptv- (UniTv)", "telefone": "5511970952083", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "86839", "data": "05/07/2025", "nome": "WalisonLP6839 iptv- (UniTv)", "telefone": "5511948786839", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "11244", "data": "05/07/2025", "nome": "Leo1244_ (UniTv)", "telefone": "5512991611244", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "02534", "data": "04/07/2025", "nome": "Iptv 🌻 5_Susana2534 (UniTv)", "telefone": "5511958102534", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "84954", "data": "15/07/2025", "nome": "Iptv 4_Kaylane❤️4954- (Duplecast)", "telefone": "5511984984954", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "47550", "data": "09/07/2025", "nome": "Andre7550_ (UniTv)", "telefone": "5515997747550", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "76468", "data": "05/07/2025", "nome": "Cris Marquinho_ (UniTv)", "telefone": "5511965976468", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "43223", "data": "05/07/2025", "nome": "Aline3223_ (UniTv)", "telefone": "5511998843223", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "58928", "data": "04/07/2025", "nome": "Neide_ (UniTv)", "telefone": "5519971158928", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "34342", "data": "10/07/2025", "nome": "Rafael4342 (Duplecast)", "telefone": "556298634342", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "08731", "data": "05/07/2025", "nome": "Carla8731_ (UniTv)", "telefone": "5511953408731", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "35153", "data": "20/06/2025", "nome": "Juniore5153_ (UniTv)", "telefone": "5511988835153", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "92818", "data": "06/07/2025", "nome": "Luziane2818_ (UniTv)", "telefone": "5511978492818", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "05291", "data": "07/06/2025", "nome": "Iptv 5_Guilherme5291- (UniTv)", "telefone": "5511978105291", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "79963", "data": "26/07/2025", "nome": "Isac9963 (UniTv)", "telefone": "558597479963", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "13453", "data": "10/07/2025", "nome": "Rayla3453_ (UniTv)", "telefone": "559591113453", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "70873", "data": "06/07/2025", "nome": "Cleide0873_ (UniTv)", "telefone": "5511964470873", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "98830", "data": "11/07/2025", "nome": "Rafaela8830_ (UniTv)", "telefone": "5511949498830", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "76265", "data": "05/07/2025", "nome": "Denilson6265_ (UniTv)", "telefone": "5511969376265", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "79275", "data": "08/07/2025", "nome": "Jones9275 Iptv Pontes_ (UniTv)", "telefone": "5511952379275", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "17690", "data": "09/07/2025", "nome": "Rodrigo7690_ (UniTv)", "telefone": "5519993617690", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "10713", "data": "09/07/2025", "nome": "Alex0713_ (UniTv)", "telefone": "5511946710713", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "36256", "data": "10/07/2025", "nome": "###Marcelo6256_ (UniTv)", "telefone": "5511953836256", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "09236", "data": "15/07/2025", "nome": "Iptv 11_ematias9236 (UniTv)", "telefone": "5511915909236", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "67850", "data": "13/07/2025", "nome": "Wandinho irmão_ (UniTv)", "telefone": "5511972167850", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "19037", "data": "13/07/2025", "nome": "Benedito9037_ (UniTv)", "telefone": "5511914019037", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "42448", "data": "15/07/2025", "nome": "01-Donizete2448_ (UniTv)", "telefone": "5511950742448", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "95124", "data": "14/07/2025", "nome": "Osmar5124 iptv_ (Duplecast)", "telefone": "5511930295124", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "830-1", "data": "15/07/2025", "nome": "Sogra Rafaela8830_ (UniTv)", "telefone": "5511949498830-1", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "04913", "data": "15/07/2025", "nome": "Paula4913_ (UniTv)", "telefone": "5511951504913", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "90685", "data": "15/07/2025", "nome": "Genilda0685_ (UniTv)", "telefone": "5511965790685", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "69484", "data": "23/07/2025", "nome": "Silvana9484_ (UniTv)", "telefone": "5511913069484", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "72385", "data": "02/10/2025", "nome": "Evandro2385_ (UniTv)", "telefone": "5511965872385", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "34299", "data": "02/10/2025", "nome": "Bruna Amiga- (UniTv)", "telefone": "5511930734299", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "11852", "data": "28/07/2026", "nome": "iptv Augusto1852- (UniTv)", "telefone": "5511989011852", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "11893", "data": "29/07/2025", "nome": "Roberta1893 iptv (UniTv)", "telefone": "5519999011893", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "70163", "data": "10/06/2025", "nome": "Ricardo0163 NEt (UniTv)", "telefone": "557788170163", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "18970", "data": "19/06/2025", "nome": "Gui8970 iptv (UniTv)", "telefone": "5511982218970", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "75310", "data": "24/07/2025", "nome": "Daniell5310 (UniTv)", "telefone": "5511985775310", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "08173", "data": "28/07/2025", "nome": "Vanessa8173 (DupleCast) (UniTv)", "telefone": "5511996308173", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "06273", "data": "12/07/2025", "nome": "Janinha6273 (UniTv)", "telefone": "5511987906273", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "30278", "data": "27/06/2025", "nome": "Vange0278 iptv (UniTv)", "telefone": "5511981530278", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": true },
+            { "id": "830-2", "data": "30/07/2025", "nome": "Rafaela8830 segundo. Ponto (UniTv)", "telefone": "5511949498830-2", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "77676", "data": "10/07/2025", "nome": "Aline 7676 IPTV (UniTv)", "telefone": "5511969377676", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "79621", "data": "12/07/2025", "nome": "Juliana9621 (UniTv)", "telefone": "5511966379621", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "12045", "data": "14/07/2025", "nome": "vih2045 (UniTv)", "telefone": "5511957212045", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "43070", "data": "16/07/2025", "nome": "Lucas3070 IPTV (UniTv)", "telefone": "5511949543070", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "41158", "data": "18/07/2025", "nome": "Gerson1158 IPTV (UniTv)", "telefone": "5511989241158", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "22294", "data": "08/07/2025", "nome": "Andrea2294 IPTV (Duplecast)", "telefone": "5511942422294", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "80827", "data": "29/07/2025", "nome": "Jefferson0827 (UniTv)", "telefone": "5511962780827", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "52853", "data": "10/07/2025", "nome": "Isadora2853 (UniTv)", "telefone": "5517996452853", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "69887", "data": "21/07/2025", "nome": "Ivan9887 (UniTv)", "telefone": "5511973669887", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "83637", "data": "25/07/2025", "nome": "Mel3637 (UniTv)", "telefone": "5511960983637", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "30988", "data": "05/07/2025", "nome": "Renata0988 (Duplecast)", "telefone": "5511933630988", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "12509", "data": "25/12/2025", "nome": "teste (UniTv)", "telefone": "11950912509", "avisado": false, "debito": true, "Produto": "UniTv", "arquivado": true, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "78852", "data": "27/07/2025", "nome": "felipe8852 (Duplecast)", "telefone": "5511981378852", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": true, "verDepois": false, "desativado": false },
+            { "id": "11278", "data": "30/06/2025", "nome": "Renata1278 (UniTv)", "telefone": "5511954311278", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": true, "verDepois": false, "desativado": false },
+            { "id": "00703", "data": "14/07/2025", "nome": "Carlos0703 (UniTv)", "telefone": "5511944300703", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "86115", "data": "30/06/2025", "nome": "Miqueias6115 (Duplecast)", "telefone": "5511953286115", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": true, "verDepois": false, "desativado": false },
+            { "id": "76317", "data": "27/07/2025", "nome": "Jessica6317 (UniTv)", "telefone": "5511943176317", "avisado": false, "debito": false, "Produto": "UniTv", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false },
+            { "id": "12508", "data": "26/11/2025", "nome": "teste (Duplecast)", "telefone": "11950912508", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false }
+        ];
+
+        let clientData = []; // Variável para armazenar os dados do JSON (carregados do Local Storage ou initialClientData)
+        let clientsDueToday = [];
+        let currentClientIndex = 0;
+
+        const LOCAL_STORAGE_KEY = 'clientesVencendoHojeData';
+
+        // --- Funções para Local Storage ---
+        function saveClientData() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(clientData));
+        }
+
+        function loadClientData() {
+            const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (storedData) {
+                try {
+                    clientData = JSON.parse(storedData);
+                    console.log('Dados carregados do Local Storage.');
+                } catch (e) {
+                    console.error('Erro ao analisar dados do Local Storage:', e);
+                    clientData = initialClientData; // Volta para os dados iniciais em caso de erro
+                }
+            } else {
+                clientData = initialClientData; // Carrega os dados iniciais se não houver nada no Local Storage
+                console.log('Nenhum dado no Local Storage, usando dados iniciais.');
+            }
+            filterClientsDueToday(); // Filtra os clientes após carregar os dados
+        }
+        // --- Fim das Funções para Local Storage ---
+
+
+        function getTodayDateFormatted() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function filterClientsDueToday() {
+            const todayFormatted = getTodayDateFormatted();
+            clientsDueToday = clientData.filter(client => {
+                const clientDate = client.data;
+                // Para 06/07/2025
+                // console.log(`Comparando ${clientDate} com ${todayFormatted}`); // Para depuração
+                return clientDate === todayFormatted && !client.arquivado && !client.oculto && !client.desativado;
+            });
+            currentClientIndex = 0;
+            updateButton();
+        }
+
+        function updateButton() {
+            if (clientsDueToday.length > 0 && currentClientIndex < clientsDueToday.length) {
+                const currentClient = clientsDueToday[currentClientIndex];
+                copyLabel.textContent = "COPIAR";
+                phoneNumberDisplay.textContent = currentClient.telefone;
+                clientButton.disabled = false;
+                clientCountBadge.textContent = clientsDueToday.length - currentClientIndex;
+                clientCountBadge.style.display = 'flex';
+            } else {
+                copyLabel.textContent = "";
+                phoneNumberDisplay.textContent = "Nenhum cliente vencendo hoje";
+                clientButton.disabled = true;
+                clientCountBadge.textContent = "0";
+                clientCountBadge.style.display = 'none';
+            }
+        }
+
+        async function copyPhoneNumber() {
+            if (clientsDueToday.length > 0 && currentClientIndex < clientsDueToday.length) {
+                const phoneNumber = clientsDueToday[currentClientIndex].telefone;
+                try {
+                    await navigator.clipboard.writeText(phoneNumber);
+                    // Não mostra mais a confirmação
+                    currentClientIndex++;
+                    updateButton();
+                } catch (err) {
+                    console.error('Falha ao copiar o número: ', err);
+                    alert('Não foi possível copiar o número. Por favor, tente manualmente.');
+                }
+            }
+        }
+
+        clientButton.addEventListener('click', copyPhoneNumber);
+
+        importButton.addEventListener('click', () => {
+            const file = jsonFileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        clientData = importedData; // Atualiza a variável clientData com os novos dados
+                        saveClientData(); // Salva os novos dados no Local Storage
+                        filterClientsDueToday(); // Filtra os clientes com base nos novos dados
+                        alert('Dados importados com sucesso e salvos!');
+                    } catch (error) {
+                        alert('Erro ao analisar o arquivo JSON. Certifique-se de que é um JSON válido.');
+                        console.error('Erro ao importar JSON:', error);
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Por favor, selecione um arquivo JSON para importar.');
+            }
+        });
+
+        clearButton.addEventListener('click', () => {
+            clientData = []; // Limpa todos os dados dos clientes
+            saveClientData(); // Salva o array vazio no Local Storage
+            clientsDueToday = [];
+            currentClientIndex = 0;
+            updateButton();
+            alert('Todos os dados foram limpos e salvos.');
+        });
+
+        // Carrega os dados do Local Storage (ou os dados iniciais) quando a página é carregada
+        loadClientData();
+    </script>
+</body>
+</html>
