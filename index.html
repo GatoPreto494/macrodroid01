@@ -23,8 +23,8 @@
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-wrap: wrap; /* Permite que os controles quebrem a linha em telas menores */
-            justify-content: center; /* Centraliza os controles */
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         #jsonFileInput {
@@ -235,7 +235,7 @@
             { "id": "12508", "data": "26/11/2025", "nome": "teste (Duplecast)", "telefone": "11950912508", "avisado": false, "debito": false, "Produto": "Duplecast", "arquivado": false, "oculto": false, "verDepois": false, "desativado": false }
         ];
 
-        let clientData = []; // Variável para armazenar os dados do JSON (carregados do Local Storage ou initialClientData)
+        let clientData = [];
         let clientsDueToday = [];
         let currentClientIndex = 0;
 
@@ -254,13 +254,13 @@
                     console.log('Dados carregados do Local Storage.');
                 } catch (e) {
                     console.error('Erro ao analisar dados do Local Storage:', e);
-                    clientData = initialClientData; // Volta para os dados iniciais em caso de erro
+                    clientData = initialClientData;
                 }
             } else {
-                clientData = initialClientData; // Carrega os dados iniciais se não houver nada no Local Storage
+                clientData = initialClientData;
                 console.log('Nenhum dado no Local Storage, usando dados iniciais.');
             }
-            filterClientsDueToday(); // Filtra os clientes após carregar os dados
+            filterClientsDueToday();
         }
         // --- Fim das Funções para Local Storage ---
 
@@ -277,8 +277,6 @@
             const todayFormatted = getTodayDateFormatted();
             clientsDueToday = clientData.filter(client => {
                 const clientDate = client.data;
-                // Para 06/07/2025
-                // console.log(`Comparando ${clientDate} com ${todayFormatted}`); // Para depuração
                 return clientDate === todayFormatted && !client.arquivado && !client.oculto && !client.desativado;
             });
             currentClientIndex = 0;
@@ -307,7 +305,6 @@
                 const phoneNumber = clientsDueToday[currentClientIndex].telefone;
                 try {
                     await navigator.clipboard.writeText(phoneNumber);
-                    // Não mostra mais a confirmação
                     currentClientIndex++;
                     updateButton();
                 } catch (err) {
@@ -326,9 +323,9 @@
                 reader.onload = function(e) {
                     try {
                         const importedData = JSON.parse(e.target.result);
-                        clientData = importedData; // Atualiza a variável clientData com os novos dados
-                        saveClientData(); // Salva os novos dados no Local Storage
-                        filterClientsDueToday(); // Filtra os clientes com base nos novos dados
+                        clientData = importedData;
+                        saveClientData();
+                        filterClientsDueToday();
                         alert('Dados importados com sucesso e salvos!');
                     } catch (error) {
                         alert('Erro ao analisar o arquivo JSON. Certifique-se de que é um JSON válido.');
@@ -342,12 +339,18 @@
         });
 
         clearButton.addEventListener('click', () => {
-            clientData = []; // Limpa todos os dados dos clientes
-            saveClientData(); // Salva o array vazio no Local Storage
-            clientsDueToday = [];
-            currentClientIndex = 0;
-            updateButton();
-            alert('Todos os dados foram limpos e salvos.');
+            // Adiciona a confirmação antes de limpar
+            const confirmation = confirm("Tem certeza que deseja limpar TODOS os dados dos clientes? Esta ação não pode ser desfeita.");
+            if (confirmation) {
+                clientData = [];
+                saveClientData();
+                clientsDueToday = [];
+                currentClientIndex = 0;
+                updateButton();
+                alert('Todos os dados foram limpos e salvos.');
+            } else {
+                alert('A limpeza dos dados foi cancelada.');
+            }
         });
 
         // Carrega os dados do Local Storage (ou os dados iniciais) quando a página é carregada
